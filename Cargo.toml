@@ -10,13 +10,13 @@ crate-type = ["rlib"]
 
 
 [profile.dev]
-panic = "abort"
+#panic = "abort"
 
 [profile.release]
 panic = "abort"
 lto = true
 codegen-units = 1
-opt-level = "z"
+opt-level = 'z'
 strip = true
 debug = "none"
 split-debuginfo = "packed"

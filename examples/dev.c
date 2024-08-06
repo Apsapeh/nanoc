@@ -1,23 +1,41 @@
-#include <stdio.h>
-#define Aboba 10
+#include "dev.h"
 
-#define multiline(a, b) \
-    a + b
+#define A 10
+#define B 20 + A
+#define Aboba 30 + B
 
-#define M2 (a, b) a + b
+/*#define\
+ multiline(a\
+, b) "oeu   31  eou\a" \
+    a + b*/
+ 
+#define M(a, b) a + b\
++3
 
-int a; // Single line comment
+#define M2(int, b) int - "M(10, Aboba)"
+
+#define new_name(name) aboba__##name##__aboba
+
+
 
 const char* str = "Hello  oeu";
 
 void print(const char * a) {
-    __asm__ {
+    //Aboba;
+    GLOBAL;
+    TEST_INCLUDE
+    M(1, 2);
+    //new_name(Tofik);
+    /*__asm__ {
         read b char
 
-    }}
+    }*/
+}
 
 int func            (int /**/ a) {
-    return a;
+    //return M2(5 + func(10), 1);
+    //return M2(5, 1);
+    return 0;
 }
 
 int main() {

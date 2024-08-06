@@ -1,18 +1,19 @@
-#[derive(Debug)]
-pub struct NumWord <'a> {
-    pub word: &'a str,
-    pub filename: &'a str,
+//#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone, Debug, PartialEq)]
+pub struct NumWord {
+    pub word: String,
+    pub filename: String,
     pub line: usize,
     pub col: usize,
 }
 
-impl <'a> NumWord <'a> {
-    pub fn new(word: &'a str, filename: &'a str, line: usize, col: usize) -> NumWord<'a> {
+impl  NumWord  {
+    pub fn new(word: String, filename: String, line: usize, col: usize) -> NumWord {
         NumWord {
             word,
             filename,
             line, 
-            col
+            col,
         }
     }
     
