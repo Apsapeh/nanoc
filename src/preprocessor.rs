@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::rc::{Rc, Weak};
 
 use crate::general::CStandard;
 use crate::types::NumWord;
@@ -35,6 +37,23 @@ struct IncludeOnceFile {
     pub hash: u64,
     pub filename: String,
     pub mode: Option<IncludeReqType>,
+}
+
+#[derive(Debug)]
+struct ConditionalTree {
+    pub children: Vec<Rc<RefCell<ConditionalTree>>>,
+    pub body: Vec<NumWord>,
+    //pub parent: Option<&'a RefCell<ConditionalTree <'a>>>,
+    pub parent: Option<Weak<RefCell<ConditionalTree>>>,
+}
+
+impl ConditionalTree {
+    pub fn print(&self) {
+        println!("count: {}", self.children.len());
+        for ch in &self.children {
+            ch.borrow().print();
+        }
+    }
 }
 
 pub fn process<'a>(
@@ -116,17 +135,106 @@ fn preprocessor_body<'a>(
     //let mut defines: Vec<Define> = global_defines.clone();
     //let mut include_once_files: Vec<IncludeOnceFile> = buff_include_once_files.clone();
     let stripped = strip_file(input, String::from(filename));
+    let mut skip_stack = vec![];
+    let root_conditional_tree = Rc::new(RefCell::new(ConditionalTree { children: vec![], body: vec![], parent: None }));
+    let mut current_conditional_tree = Rc::downgrade(&root_conditional_tree);
     for line in stripped {
         //println!("{:?}", line);
         // Defines (with recursion)
 
         if line[0].word == "#" {
-            if line.len() < 2 {
-                errors.push(format!("Invalid define: {:?}", line));
+
+            if line[1].word == "ifdef" || line[1].word == "ifndef" {
+                if line.len() < 3 {
+                    errors.push(format!("Invalid {}: {:?}", line[1].word, line));
+                    continue;
+                }
+                if let None = defines.iter().find(|x| x.name == line[2].word) {
+                    skip_stack.push(line[1].word == "ifdef");
+                } else {
+                    skip_stack.push(line[1].word == "ifndef");
+                }
+                let new_node = Rc::new(RefCell::new(ConditionalTree {
+                    children: vec![],
+                    body: vec![],
+                    parent: Some(Weak::clone(&current_conditional_tree)),
+                }));
+                println!("CC_1: {:?}", current_conditional_tree.upgrade().unwrap().borrow());
+
+                let new_c = Rc::downgrade(&new_node);
+                current_conditional_tree.upgrade().unwrap().borrow_mut().children.push(new_node);
+                current_conditional_tree = new_c;
+                //current_conditional_tree.
+                //current_conditional_tree = Rc::clone(&rc);
+            } else if line[1].word == "if" {
+            } else if line[1].word == "elif" {
+            } else if line[1].word == "else" {
+            } else if line[1].word == "endif" {
+                let a = match &current_conditional_tree.upgrade().unwrap().borrow().parent {
+                    Some(s) => Weak::clone(s),
+                    None => {
+
+                        root_conditional_tree.borrow().print();
+                        //&root_conditional_tree
+                        Rc::downgrade(&root_conditional_tree)
+                        //Rc::clone(&root_conditional_tree)
+                    }
+                };
+
+                println!("CC: {:?}", current_conditional_tree.upgrade().unwrap().borrow());
+                println!("A: {:?}", a.upgrade().unwrap().borrow());
+
+                
+
+                current_conditional_tree = a;
+
+                if (current_conditional_tree.upgrade().unwrap().borrow().parent.is_none()) {
+                    root_conditional_tree.borrow().print();
+                }
+
+                //current_conditional_tree = Rc::clone(a);
+                //current_conditional_tree = Rc::clone(&root_conditional_tree);
+                
+                if skip_stack.len() == 0 {
+                    errors.push(format!("Invalid endif: {:?}", line));
+                    continue;
+                }
+                skip_stack.pop();
                 continue;
             }
+        }
 
-            if line[1].word == "define" {
+        if skip_stack.contains(&true) {
+            continue;
+        }
+
+        
+
+        if line[0].word == "#" {
+
+            /*if line[1].word == "ifdef" {
+                if line.len() < 3 {
+                    errors.push(format!("Invalid ifdef: {:?}", line));
+                    continue;
+                }
+                if let None = defines.iter().find(|x| x.name == line[2].word) {
+                    skip_stack.push(true);
+                } else {
+                    skip_stack.push(false);
+                }
+            } else if line[1].word == "ifndef" {
+            } else if line[1].word == "if" {
+            } else if line[1].word == "elif" {
+            } else if line[1].word == "else" {
+            } else if line[1].word == "endif" {
+                if skip_stack.len() == 0 {
+                    errors.push(format!("Invalid endif: {:?}", line));
+                    continue;
+                }
+                skip_stack.pop();
+            }
+
+            else*/ if line[1].word == "define" {
                 if line.len() < 3 {
                     //panic!("Invalid define: {:?}", line);
                     errors.push(format!("Invalid define: {:?}", line));
@@ -271,13 +379,19 @@ fn preprocessor_body<'a>(
                 //let include = include_req(line[1].word.to_string());
                 //result.extend(process(include.as_str(), filename, include_req).into_iter());
             } else if line[1].word == "undef" {
-            } else if line[1].word == "ifdef" {
-            } else if line[1].word == "ifndef" {
-            } else if line[1].word == "if" {
-            } else if line[1].word == "elif" {
-            } else if line[1].word == "else" {
-            } else if line[1].word == "endif" {
-            } else if line[1].word == "error" {
+                if line.len() < 3 {
+                    errors.push(format!("Invalid undef: {:?}", line));
+                    continue;
+                }
+
+                defines.retain(|x| x.name != line[2].word);
+            }  else if line[1].word == "error" {
+                /*let mut msg = String::new();
+                for w in &line[2..] {
+                    msg.push_str(&w.word);
+                }
+                errors.push(format!("Error: {}", msg));*/
+                errors.push(format!("Error: {:?}", line));
             } else if line[1].word == "warning" {
             } else if line[1].word == "pragma" {
                 if line[2].word == "once" {
@@ -286,8 +400,6 @@ fn preprocessor_body<'a>(
                         filename: filename.to_string(),
                         mode: input_file_mode.clone(),
                     })
-                    //let mut state = DefaultHasher::new();
-                    //input.hash(&mut state);
                 }
             }
         } else {
@@ -478,6 +590,7 @@ fn strip_file<'a>(input: String, filename: String) -> Vec<Vec<NumWord>> {
 
         let mut result = Vec::new();
         let mut last = 0;
+        let mut index_diff = 0;
         let mut in_string = false;
         let mut is_single_line_comment = false;
         let mut define_word_idx: usize = 0;
@@ -585,8 +698,10 @@ fn strip_file<'a>(input: String, filename: String) -> Vec<Vec<NumWord>> {
                         line[last..index].to_string(),
                         filename.clone(),
                         line_n + 1,
-                        last + 1,
-                    ))
+                        last + 1 - index_diff,
+                    ));
+                    //println!("{}: {}", line[last..index].to_string(), index_diff);
+                    index_diff += line[last..index].len() - line[last..index].chars().count();
                 }
                 if (in_string || (matched != " " && matched != "\t") || define_word_idx == 2)
                     && concate_next_line < 2
@@ -595,11 +710,14 @@ fn strip_file<'a>(input: String, filename: String) -> Vec<Vec<NumWord>> {
                         matched.to_string(),
                         filename.clone(),
                         line_n + 1,
-                        index + 1,
-                    ))
+                        index + 1 - index_diff,
+                    ));
+                    //println!("{}", matched);
                 }
                 last = index + matched.len();
+                //last_char_diff = 0;//matched.len() - matched.chars().count();
             }
+            //index_diff += matched.len() - matched.chars().count();
 
             if define_word_idx != 0 {
                 define_word_idx += 1
@@ -614,7 +732,7 @@ fn strip_file<'a>(input: String, filename: String) -> Vec<Vec<NumWord>> {
                 line[last..].to_string(),
                 filename.clone(),
                 line_n + 1,
-                last + 1,
+                last + 1 - index_diff,
             ))
         }
         if !result.is_empty() {

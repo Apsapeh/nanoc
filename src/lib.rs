@@ -3,6 +3,7 @@
 mod types;
 mod general;
 mod preprocessor;
+mod lexer;
 
 use preprocessor::{Define, IncludeReqType};
 use types::NumWord;
@@ -41,6 +42,8 @@ pub fn compile(files: Vec<String>) {
                 panic!();
             }
         };
+
+        let tokenized = lexer::lex(preprocessed);
 
         //println!("{:?}", preprocessed.defines);
     }

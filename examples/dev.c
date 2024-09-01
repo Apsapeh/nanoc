@@ -20,11 +20,22 @@
 
 const char* str = "Hello  oeu";
 
+//#define Err
+#define Err2
+#ifdef Err
+#ifndef Err2
+#error Всё       Плохо eсдд    сдфдсф#есфг
+#endif
+int b = 15;
+#endif
 void print(const char * a) {
     //Aboba;
-    GLOBAL;
+    //GLOBAL;
     TEST_INCLUDE
     M(1, 2);
+    int b = -15;
+    0x125;
+    float c = 15.01;
     //new_name(Tofik);
     /*__asm__ {
         read b char
