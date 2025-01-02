@@ -1,4 +1,5 @@
 #include "dev.h"
+#include "dev.h"
 
 #define A 10
 #define B 20 + A

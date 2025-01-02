@@ -4,7 +4,7 @@ use crate::NumWord;
 pub enum Token {
     Integer(NumWord),
     Float(Vec<NumWord>),
-    String(Vec<NumWord>),
+    String(NumWord),
     Char(NumWord),
     Word(NumWord),
     RoundBracketBegin(NumWord),     // (
@@ -53,15 +53,30 @@ pub enum Token {
 pub fn lex(input: Vec<NumWord>) -> Vec<Token> {
     let mut tokens = vec![];
     
-    for i in 0..input.len() {
-        //let w = &input[i];
-        //let prev = if i > 0 { Some(&input[i + 1]) } else { None };
+    let mut is_string = false;
+    let mut string = NumWord::new("".to_string(), "".to_string(), 0, 0);
+    
+    let mut i = 0;
+    while i < input.len() {
+        let num_word = &input[i];
+        let word = &num_word.word;
+        i += 1;
 
-        //println!("Word: '{}' -- {}", w.word, is_integer(&w.word));
-        if is_integer(&input[i].word) {
-            tokens.push(Token::Integer(input[i]));
+        if word == "\"" {
+            is_string = !is_string;
+
+            if is_string {
+                string = NumWord::new("".to_string(), num_word.filename.clone(), num_word.line, num_word.col);
+            } else {
+                tokens.push(Token::String(string));
+                string = NumWord::new("".to_string(), "".to_string(), 0, 0);
+            }
+            continue;
         }
-        //tokens.push(Token::Word(w));
+
+        if is_string {
+            string.word.push_str(word);
+        }
     }
 
     println!("Tokens: {:?}", tokens);
